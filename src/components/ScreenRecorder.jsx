@@ -13,7 +13,6 @@ const ScreenRecorder = () => {
         video: { displaySurface: "monitor" },
         audio: true,
       });
-      console.log(stream.getVideoTracks()[0].getSettings().displaySurface);
       const displaySurface = stream
         .getVideoTracks()[0]
         .getSettings().displaySurface;
@@ -41,7 +40,7 @@ const ScreenRecorder = () => {
         setErrorMessage(
           "Please share your entire screen and try recording again."
         );
-        stream.getTracks().forEach((track) => track.stop()); // Stop the stream as it's not used
+        stream.getTracks().forEach((track) => track.stop());
       }
     } catch (error) {
       console.error("Error accessing screen: ", error);
