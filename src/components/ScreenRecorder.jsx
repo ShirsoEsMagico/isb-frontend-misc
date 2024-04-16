@@ -1,43 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const ScreenRecorder = () => {
   const [recording, setRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [videoURL, setVideoURL] = useState('');
+  const [videoURL, setVideoURL] = useState("");
 
   let chunks = [];
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'monitor' }, audio: true });
-
-      if (stream.getVideoTracks()[0].getSettings().displaySurface === 'monitor') {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "monitor" },
+        audio: true,
+      });
+      console.log(stream.getVideoTracks()[0].getSettings().displaySurface);
+      const displaySurface = stream
+        .getVideoTracks()[0]
+        .getSettings().displaySurface;
+      if (displaySurface === "monitor") {
         setErrorMessage("");
+        const recorder = new MediaRecorder(stream);
+
+        recorder.ondataavailable = (event) => {
+          chunks.push(event.data);
+        };
+
+        recorder.onstop = () => {
+          const recordedBlob = new Blob(chunks, { type: "video/webm" });
+          const url = URL.createObjectURL(recordedBlob);
+          setVideoURL(url);
+          setRecording(false);
+          setMediaRecorder(null);
+          chunks = [];
+        };
+
+        recorder.start();
+        setRecording(true);
+        setMediaRecorder(recorder);
       } else {
-        setErrorMessage("Please share your entire screen and try recording again.");
-        return; 
+        setErrorMessage(
+          "Please share your entire screen and try recording again."
+        );
+        stream.getTracks().forEach((track) => track.stop()); // Stop the stream as it's not used
       }
-
-      const recorder = new MediaRecorder(stream);
-      
-      recorder.ondataavailable = (event) => {
-          chunks.push(event.data)
-      };
-
-      recorder.onstop = () => {
-        const recordedBlob = new Blob(chunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(recordedBlob);
-        setVideoURL(url);
-        setRecording(false);
-        setMediaRecorder(null);
-        chunks = []
-      };
-
-      recorder.start();
-      setRecording(true);
-      setMediaRecorder(recorder);
     } catch (error) {
-      console.error('Error accessing screen: ', error);
+      console.error("Error accessing screen: ", error);
     }
   };
 
@@ -50,7 +57,7 @@ const ScreenRecorder = () => {
 
   return (
     <div>
-      {errorMessage && (<div> {errorMessage} </div>)}
+      {errorMessage && <div> {errorMessage} </div>}
 
       {recording ? (
         <button onClick={stopRecording}>Stop Recording</button>
@@ -58,9 +65,7 @@ const ScreenRecorder = () => {
         <button onClick={startRecording}>Start Recording</button>
       )}
 
-      {videoURL && (
-        <video controls src={videoURL} />
-      )}
+      {videoURL && <video controls src={videoURL} />}
     </div>
   );
 };
