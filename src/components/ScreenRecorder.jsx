@@ -1,64 +1,66 @@
-import React, { useState, useEffect } from "react";
-import { useReactMediaRecorder } from "react-media-recorder";
+import React, { useState } from 'react';
 
 const ScreenRecorder = () => {
-  const { status, startRecording, stopRecording, mediaBlobUrl, previewStream } =
-    useReactMediaRecorder({ screen: true, video: true });
+  const [recording, setRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
+  const [videoURL, setVideoURL] = useState('');
 
-  const recording = status === "recording";
-  const stopped = status === "stopped";
+  let chunks = [];
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'monitor' }, audio: true });
 
-  const handleStartRecording = () => {
-    setErrorMessage("");
-    startRecording();
-  };
-
-  const handleStopRecording = () => {
-    stopRecording();
-  };
-
-  useEffect(() => {
-    const handlePreview = () => {
-      if (previewStream && previewStream.getVideoTracks().length > 0) {
-        const isEntireScreen =
-          previewStream.getVideoTracks()[0].getSettings().displaySurface ===
-          "monitor";
-        if (isEntireScreen) {
-          setShowPreview(true);
-        } else {
-          setErrorMessage("Please share your entire screen and try recording again.");
-        }
+      if (stream.getVideoTracks()[0].getSettings().displaySurface === 'monitor') {
+        setErrorMessage("");
+      } else {
+        setErrorMessage("Please share your entire screen and try recording again.");
+        return; 
       }
-    };
 
-    if (stopped) {
-      handlePreview();
+      const recorder = new MediaRecorder(stream);
+      
+      recorder.ondataavailable = (event) => {
+          chunks.push(event.data)
+      };
+
+      recorder.onstop = () => {
+        const recordedBlob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(recordedBlob);
+        setVideoURL(url);
+        setRecording(false);
+        setMediaRecorder(null);
+        chunks = []
+      };
+
+      recorder.start();
+      setRecording(true);
+      setMediaRecorder(recorder);
+    } catch (error) {
+      console.error('Error accessing screen: ', error);
     }
-  }, [stopped, previewStream]);
+  };
 
-  if (showPreview) {
-    return (
-      <div>
-        <h2>Preview</h2>
-        <video src={mediaBlobUrl} controls />
-      </div>
-    );
-  }
+  const stopRecording = () => {
+    if (mediaRecorder && recording) {
+      mediaRecorder.stop();
+      setRecording(false);
+    }
+  };
 
   return (
     <div>
-      {recording && <div>Recording in progress...</div>}
-      {errorMessage && <div>{errorMessage}</div>}
-      <div>
-        <button onClick={handleStartRecording} disabled={recording}>
-          Start recording
-        </button>
-        <button onClick={handleStopRecording} disabled={!recording}>
-          Stop
-        </button>
-      </div>
+      {errorMessage && (<div> {errorMessage} </div>)}
+
+      {recording ? (
+        <button onClick={stopRecording}>Stop Recording</button>
+      ) : (
+        <button onClick={startRecording}>Start Recording</button>
+      )}
+
+      {videoURL && (
+        <video controls src={videoURL} />
+      )}
     </div>
   );
 };
