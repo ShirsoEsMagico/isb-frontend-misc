@@ -5,6 +5,7 @@ const ScreenRecorder = () => {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [videoURL, setVideoURL] = useState("");
+  const [mediaStream, setMediaStream] = useState(null);
 
   let chunks = [];
   const startRecording = async () => {
@@ -36,6 +37,7 @@ const ScreenRecorder = () => {
         recorder.start();
         setRecording(true);
         setMediaRecorder(recorder);
+        setMediaStream(stream);
       } else {
         setErrorMessage(
           "Please share your entire screen and try recording again."
@@ -51,6 +53,9 @@ const ScreenRecorder = () => {
     if (mediaRecorder && recording) {
       mediaRecorder.stop();
       setRecording(false);
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+      }
     }
   };
 
